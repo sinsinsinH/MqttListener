@@ -17,15 +17,14 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Host:"
-            android:textSize="20dp"
+            android:textSize="15dp"
             android:textStyle="bold" />
 
         <EditText
             android:id="@+id/host"
-            android:layout_width="wrap_content"
+            android:layout_width="155dp"
             android:layout_height="wrap_content"
-            android:hint="120.78.209.207"
-            android:textSize="20dp"
+            android:textSize="15dp"
             android:textStyle="bold" />
 
         <TextView
@@ -33,15 +32,14 @@
             android:layout_height="wrap_content"
             android:layout_marginLeft="10dp"
             android:text="Port:"
-            android:textSize="20dp"
+            android:textSize="15dp"
             android:textStyle="bold" />
 
         <EditText
             android:id="@+id/port"
-            android:layout_width="wrap_content"
+            android:layout_width="78dp"
             android:layout_height="wrap_content"
-            android:hint="1883"
-            android:textSize="20dp"
+            android:textSize="15dp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -55,30 +53,28 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="UserName:"
-            android:textSize="20dp"
+            android:textSize="15dp"
             android:textStyle="bold" />
 
         <EditText
             android:id="@+id/uesrName"
-            android:layout_width="wrap_content"
+            android:layout_width="88dp"
             android:layout_height="wrap_content"
-            android:hint="listener"
-            android:textSize="20dp"
+            android:textSize="15dp"
             android:textStyle="bold" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Password:"
-            android:textSize="20dp"
+            android:textSize="15dp"
             android:textStyle="bold" />
 
         <EditText
             android:id="@+id/password"
-            android:layout_width="wrap_content"
+            android:layout_width="83dp"
             android:layout_height="wrap_content"
-            android:hint="lguning"
-            android:textSize="20dp"
+            android:textSize="15dp"
             android:textStyle="bold" />
 
     </LinearLayout>
@@ -92,17 +88,44 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Topic:"
-            android:textSize="20dp"
+            android:textSize="15dp"
             android:textStyle="bold" />
 
         <EditText
             android:id="@+id/topic"
-            android:layout_width="wrap_content"
+            android:layout_width="294dp"
             android:layout_height="wrap_content"
-            android:hint="testTopic"
-            android:textSize="20dp"
+            android:textSize="15dp"
             android:textStyle="bold" />
     </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="10dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="api:"
+            android:textSize="15dp"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/api"
+            android:layout_width="302dp"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:textSize="15dp" />
+
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/btn_get"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="获取topic" />
 
     <Button
         android:id="@+id/btn_start"
@@ -118,10 +141,4 @@
         android:layout_marginTop="10dp"
         android:text="停止服务" />
 
-    <ListView
-        android:id="@+id/listView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_marginLeft="10dp"
-        android:layout_marginTop="10dp"></ListView>
 </LinearLayout>

@@ -20,10 +20,16 @@ import org.fusesource.mqtt.client.Message;
 import org.fusesource.mqtt.client.QoS;
 import org.fusesource.mqtt.client.Topic;
 
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
+
 public class MqttService extends Service {
     private String host, userName, password, topic;
     private int port;
     private static final String TAG = "ddd";
+    private Topic[] topics;
 
     public MqttService() {
     }
@@ -33,7 +39,7 @@ public class MqttService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(TAG, "onStartCommand: " + "开始服务");
         //服务自启从sharedPrefenences读取配置信息
-        if (intent.getExtras()!=null){
+        if (intent.getExtras() != null) {
             host = intent.getExtras().getString("host");
             port = Integer.valueOf(intent.getExtras().getString("port"));
             userName = intent.getExtras().getString("userName");
@@ -47,12 +53,19 @@ public class MqttService extends Service {
             editor.putString("password", password);
             editor.putString("topic", topic);
             editor.commit();
+        } else {
+            host = getSharedPreferences("data", Context.MODE_PRIVATE).getString("host", "");
+            port = getSharedPreferences("data", Context.MODE_PRIVATE).getInt("port", 0);
+            userName = getSharedPreferences("data", Context.MODE_PRIVATE).getString("userName", "");
+            password = getSharedPreferences("data", Context.MODE_PRIVATE).getString("password", "");
+            topic = getSharedPreferences("data", Context.MODE_PRIVATE).getString("topic", "");
         }
         new Thread() {
             @Override
             public void run() {
                 super.run();
-                startMQTT(getSharedPreferences("data", Context.MODE_PRIVATE).getString("topic", ""));
+                startMQTT(topic);
+                Log.d(TAG, "run: " + "开启新线程");
             }
         }.start();
         return super.onStartCommand(intent, flags, startId);
@@ -72,19 +85,27 @@ public class MqttService extends Service {
 
     //监听mqtt
     public Message startMQTT(String topic) {
+
         Message message = null;
         String str = null;
         MQTT mqtt = new MQTT();
         try {
-            mqtt.setHost(getSharedPreferences("data", Context.MODE_PRIVATE).getString("host", ""), getSharedPreferences("data", Context.MODE_PRIVATE).getInt("port", 0));
-            mqtt.setUserName(getSharedPreferences("data", Context.MODE_PRIVATE).getString("userName", ""));
-            mqtt.setPassword(getSharedPreferences("data", Context.MODE_PRIVATE).getString("password", ""));
+            mqtt.setHost(host, port);
+            mqtt.setUserName(userName);
+            mqtt.setPassword(password);
             mqtt.setKeepAlive((short) 0);
             BlockingConnection connection = mqtt.blockingConnection();
             connection.connect();
-            Topic[] topics = {new Topic(topic, QoS.AT_LEAST_ONCE)};
+            if (topic.equals(",")) {
+                String[] strTpoic = topic.split(",");
+                topics = new Topic[strTpoic.length];
+                for (int i = 0; i < topics.length; i++) {
+                    topics[i] = new Topic(strTpoic[i], QoS.AT_LEAST_ONCE);
+                }
+            }else{
+                Topic[] topics = {new Topic(topic, QoS.AT_LEAST_ONCE)};
+            }
             byte[] qoses = connection.subscribe(topics);
-
             while (true) {
                 message = connection.receive();
                 message.ack();
@@ -104,7 +125,7 @@ public class MqttService extends Service {
     public void sendNotification(String str) {
         NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this);
-        builder.setContentTitle("MqttDemo");//设置通知标题
+        builder.setContentTitle("MqttListener");//设置通知标题
         builder.setContentText(str);//设置通知内容
         builder.setDefaults(NotificationCompat.DEFAULT_ALL);//设置通知的方式
         builder.setAutoCancel(true);//点击通知后，状态栏自动删除通知
