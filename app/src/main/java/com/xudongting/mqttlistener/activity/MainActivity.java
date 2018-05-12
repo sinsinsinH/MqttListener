@@ -148,8 +148,7 @@ public class MainActivity extends AppCompatActivity {
                                         baos.write(b, 0, length);
                                     }
                                     String msg = baos.toString();
-                                    JSONObject obj = new JSONObject(msg);
-                                    String str = obj.getJSONArray("data").toString();
+                                    String str = new JSONObject(msg).getJSONObject("data").getJSONArray("topics").toString();
                                     final String topics = str.substring(1, str.length() - 1);
                                     Log.d(TAG, "run: " + topics);
                                     handler.post(new Runnable() {
