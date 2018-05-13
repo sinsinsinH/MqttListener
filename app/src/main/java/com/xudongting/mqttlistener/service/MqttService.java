@@ -11,25 +11,19 @@ import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.support.v7.app.NotificationCompat;
 import android.util.Log;
-
 import com.xudongting.mqttlistener.activity.NotifyActivity;
-
 import org.fusesource.mqtt.client.BlockingConnection;
 import org.fusesource.mqtt.client.MQTT;
 import org.fusesource.mqtt.client.Message;
 import org.fusesource.mqtt.client.QoS;
 import org.fusesource.mqtt.client.Topic;
 
-import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
+
 
 public class MqttService extends Service {
     private String host, userName, password, topic;
     private int port;
     private static final String TAG = "ddd";
-    private Topic[] topics;
 
     public MqttService() {
     }
@@ -38,7 +32,9 @@ public class MqttService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(TAG, "onStartCommand: " + "开始服务");
-        //服务自启从sharedPrefenences读取配置信息
+
+        //服务从intent启动就从intent里面读取配置信息并保存
+       // 服务自启从sharedPrefenences读取配置信息
         if (intent.getExtras() != null) {
             host = intent.getExtras().getString("host");
             port = Integer.valueOf(intent.getExtras().getString("port"));
@@ -96,15 +92,11 @@ public class MqttService extends Service {
             mqtt.setKeepAlive((short) 0);
             BlockingConnection connection = mqtt.blockingConnection();
             connection.connect();
-            if (topic.equals(",")) {
                 String[] strTpoic = topic.split(",");
-                topics = new Topic[strTpoic.length];
+                Topic[] topics = new Topic[strTpoic.length];
                 for (int i = 0; i < topics.length; i++) {
                     topics[i] = new Topic(strTpoic[i], QoS.AT_LEAST_ONCE);
                 }
-            }else{
-                Topic[] topics = {new Topic(topic, QoS.AT_LEAST_ONCE)};
-            }
             byte[] qoses = connection.subscribe(topics);
             while (true) {
                 message = connection.receive();
