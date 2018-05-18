@@ -16,21 +16,17 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
-
 import com.xudongting.mqttlistener.R;
 import com.xudongting.mqttlistener.receiver.BootReceiver;
 import com.xudongting.mqttlistener.service.MqttService;
-
 import org.json.JSONException;
 import org.json.JSONObject;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-
 import butterknife.BindView;
 import butterknife.ButterKnife;
 
@@ -62,7 +58,7 @@ public class MainActivity extends AppCompatActivity {
     private IntentFilter intentFilter;
     private Handler handler;
     private String imei;
-    private String applicationId="com.xudongting.mqttlistener";
+    private String applicationId = "com.xudongting.mqttlistener";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -87,6 +83,8 @@ public class MainActivity extends AppCompatActivity {
     private void checkInput() {
         if (textHost.equals("") || textPort.equals("") || textUserName.equals("") || textPassword.equals("") || textTopic.equals("")) {
             isReady = false;
+        } else {
+            isReady = true;
         }
     }
 
@@ -113,6 +111,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         imei = telephonyManager.getDeviceId();
+        Log.d(TAG, "initData: " + imei);
     }
 
     private void setListener() {
@@ -129,17 +128,11 @@ public class MainActivity extends AppCompatActivity {
                         public void run() {
                             super.run();
                             try {
-                                URL url = new URL(textApi);
+                                URL url = new URL(textApi + "?uid=" + imei + "&applicationId=" + applicationId);
                                 HttpURLConnection coon = (HttpURLConnection) url.openConnection();
                                 coon.setRequestMethod("GET");
                                 coon.setReadTimeout(6000);
                                 if (coon.getResponseCode() == 200) {
-                                    //传递imei和applicationid
-                                    URL url1=new URL(textApi+"？uid="+imei+"&applicationId="+applicationId);
-                                    HttpURLConnection coon1 = (HttpURLConnection) url1.openConnection();
-                                    coon1.setRequestMethod("GET");
-                                    coon1.setReadTimeout(6000);
-
                                     InputStream in = coon.getInputStream();
                                     ByteArrayOutputStream baos = new ByteArrayOutputStream();
                                     byte[] b = new byte[1024];
@@ -158,9 +151,8 @@ public class MainActivity extends AppCompatActivity {
                                         }
                                     });
 
-                                }
-                                else{
-                                    Toast.makeText(MainActivity.this,"请输入正确api！",Toast.LENGTH_SHORT).show();
+                                } else {
+                                    Toast.makeText(MainActivity.this, "请输入正确api！", Toast.LENGTH_SHORT).show();
                                 }
                             } catch (MalformedURLException e) {
                                 e.printStackTrace();
