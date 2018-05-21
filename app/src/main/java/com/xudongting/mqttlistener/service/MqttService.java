@@ -1,68 +1,85 @@
 package com.xudongting.mqttlistener.service;
 
+import android.Manifest;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.NotificationCompat;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 
 import com.xudongting.mqttlistener.activity.NotifyActivity;
+import com.xudongting.mqttlistener.entity.EventBusMsg;
 
 import org.fusesource.mqtt.client.BlockingConnection;
 import org.fusesource.mqtt.client.MQTT;
 import org.fusesource.mqtt.client.Message;
 import org.fusesource.mqtt.client.QoS;
 import org.fusesource.mqtt.client.Topic;
+import org.greenrobot.eventbus.EventBus;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 
 
 public class MqttService extends Service {
-    private String host, userName, password, topic;
-    private int port;
+    private String host = "120.78.209.207", userName = "listener", password = "lguning";
+    private int port = 1883;
+    private String imei;
+    private String applicationId = "com.xudongting.mqttlistener";
+    private String topics;
     private static final String TAG = "ddd";
 
     public MqttService() {
     }
 
-
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(TAG, "onStartCommand: " + "开始服务");
-
-        //服务从intent启动就从intent里面读取配置信息并保存
-        // 服务自启从sharedPrefenences读取配置信息
-        if (intent.getExtras() != null) {
-            host = intent.getExtras().getString("host");
-            port = Integer.valueOf(intent.getExtras().getString("port"));
-            userName = intent.getExtras().getString("userName");
-            password = intent.getExtras().getString("password");
-            topic = intent.getExtras().getString("topic");
-            SharedPreferences sp = getSharedPreferences("data", Context.MODE_PRIVATE);
-            SharedPreferences.Editor editor = sp.edit();
-            editor.putString("host", host);
-            editor.putInt("port", port);
-            editor.putString("userName", userName);
-            editor.putString("password", password);
-            editor.putString("topic", topic);
-            editor.commit();
-        } else {
-            host = getSharedPreferences("data", Context.MODE_PRIVATE).getString("host", "");
-            port = getSharedPreferences("data", Context.MODE_PRIVATE).getInt("port", 0);
-            userName = getSharedPreferences("data", Context.MODE_PRIVATE).getString("userName", "");
-            password = getSharedPreferences("data", Context.MODE_PRIVATE).getString("password", "");
-            topic = getSharedPreferences("data", Context.MODE_PRIVATE).getString("topic", "");
-        }
+        EventBus.getDefault().post(new EventBusMsg("服务已开启..."));
+        EventBus.getDefault().post(new EventBusMsg("连接MQTT服务器中..."));
         new Thread() {
             @Override
             public void run() {
                 super.run();
-                startMQTT(topic);
-                Log.d(TAG, "run: " + "开启新线程");
+                try {
+                    URL url = new URL("http://120.78.209.207:8888/api/getTopics" + "?uid=" + imei + "&applicationId=" + applicationId);
+                    HttpURLConnection coon = (HttpURLConnection) url.openConnection();
+                    coon.setRequestMethod("GET");
+                    coon.setReadTimeout(6000);
+                    InputStream in = coon.getInputStream();
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    byte[] b = new byte[1024];
+                    int length = 0;
+                    while ((length = in.read(b)) > -1) {
+                        baos.write(b, 0, length);
+                    }
+                    String msg = baos.toString();
+                    String str = new JSONObject(msg).getJSONObject("data").getJSONArray("topics").toString();
+                    topics = str.substring(1, str.length() - 1);
+                    Log.d(TAG, "run: " + topics);
+
+                    startMQTT();
+                } catch (MalformedURLException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
             }
         }.start();
         return super.onStartCommand(intent, flags, startId);
@@ -81,8 +98,7 @@ public class MqttService extends Service {
     }
 
     //监听mqtt
-    public Message startMQTT(String topic) {
-
+    public Message startMQTT() {
         Message message = null;
         String str = null;
         MQTT mqtt = new MQTT();
@@ -93,21 +109,25 @@ public class MqttService extends Service {
             mqtt.setKeepAlive((short) 0);
             BlockingConnection connection = mqtt.blockingConnection();
             connection.connect();
-            String[] strTpoic = topic.split(",");
-//            for(int i=0;i<strTpoic.length;i++){
-//                Log.d(TAG, "startMQTT: "+strTpoic[i]);
-//            }
+            String[] strTpoic = topics.split(",");
             Topic[] topics = new Topic[strTpoic.length];
             for (int i = 0; i < topics.length; i++) {
-                topics[i] = new Topic(strTpoic[i].substring(1,strTpoic[i].length()-1), QoS.AT_LEAST_ONCE);
+                topics[i] = new Topic(strTpoic[i].substring(1, strTpoic[i].length() - 1), QoS.AT_LEAST_ONCE);
             }
             byte[] qoses = connection.subscribe(topics);
+            EventBus.getDefault().post(new EventBusMsg("服务器连接成功..."));
+            EventBus.getDefault().post(new EventBusMsg("开始监听消息..."));
             while (true) {
                 message = connection.receive();
                 message.ack();
                 str = new String(message.getPayload());
-                Log.d(TAG, "MqttListener: " + str);
-                sendNotification(str);
+                Log.d(TAG, "startMQTT: " + str);
+                JSONObject jsonObject = new JSONObject(str);
+                String title = jsonObject.getString("title");
+                String content = jsonObject.getString("content");
+                Log.d(TAG, "startMQTT: "+title+content);
+                EventBus.getDefault().post(new EventBusMsg("title:" + title + "content:" + content));
+                sendNotification(title, content);
             }
 
         } catch (Exception e) {
@@ -118,11 +138,11 @@ public class MqttService extends Service {
     }
 
     //发送推送消息方法
-    public void sendNotification(String str) {
+    public void sendNotification(String title, String content) {
         NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this);
-        builder.setContentTitle("MqttListener");//设置通知标题
-        builder.setContentText(str);//设置通知内容
+        builder.setContentTitle(title);//设置通知标题
+        builder.setContentText(content);//设置通知内容
         builder.setDefaults(NotificationCompat.DEFAULT_ALL);//设置通知的方式
         builder.setAutoCancel(true);//点击通知后，状态栏自动删除通知
         builder.setSmallIcon(android.R.drawable.ic_dialog_alert);//设置小图标
@@ -132,5 +152,22 @@ public class MqttService extends Service {
 
         //发送通知
         notificationManager.notify(0x101, notification);
+    }
+
+    //获取IMEI
+    public void getIMEI() {
+        TelephonyManager telephonyManager = (TelephonyManager) getApplicationContext().getSystemService(Context.TELEPHONY_SERVICE);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        imei = telephonyManager.getDeviceId();
+        Log.d(TAG, "initData: " + imei);
     }
 }
