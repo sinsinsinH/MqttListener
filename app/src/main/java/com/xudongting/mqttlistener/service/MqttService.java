@@ -126,6 +126,7 @@ public class MqttService extends Service {
                 String title = jsonObject.getString("title");
                 String content = jsonObject.getString("content");
                 Log.d(TAG, "startMQTT: "+title+content);
+                EventBus.getDefault().post(new EventBusMsg("获取到消息..."));
                 EventBus.getDefault().post(new EventBusMsg("title:" + title + "content:" + content));
                 sendNotification(title, content);
             }
