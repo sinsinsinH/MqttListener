@@ -42,6 +42,7 @@ public class MqttService extends Service {
     private String applicationId = "com.xudongting.mqttlistener";
     private String topics;
     private static final String TAG = "ddd";
+    MyThread myThread=new MyThread();
 
     public MqttService() {
     }
@@ -51,37 +52,7 @@ public class MqttService extends Service {
         Log.d(TAG, "onStartCommand: " + "开始服务");
         EventBus.getDefault().post(new EventBusMsg("服务已开启..."));
         EventBus.getDefault().post(new EventBusMsg("连接MQTT服务器中..."));
-        new Thread() {
-            @Override
-            public void run() {
-                super.run();
-                try {
-                    URL url = new URL("http://120.78.209.207:8888/api/getTopics" + "?uid=" + imei + "&applicationId=" + applicationId);
-                    HttpURLConnection coon = (HttpURLConnection) url.openConnection();
-                    coon.setRequestMethod("GET");
-                    coon.setReadTimeout(6000);
-                    InputStream in = coon.getInputStream();
-                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                    byte[] b = new byte[1024];
-                    int length = 0;
-                    while ((length = in.read(b)) > -1) {
-                        baos.write(b, 0, length);
-                    }
-                    String msg = baos.toString();
-                    String str = new JSONObject(msg).getJSONObject("data").getJSONArray("topics").toString();
-                    topics = str.substring(1, str.length() - 1);
-                    Log.d(TAG, "run: " + topics);
-
-                    startMQTT();
-                } catch (MalformedURLException e) {
-                    e.printStackTrace();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            }
-        }.start();
+        myThread.start();
         return super.onStartCommand(intent, flags, startId);
     }
 
@@ -95,6 +66,7 @@ public class MqttService extends Service {
     public void onDestroy() {
         super.onDestroy();
         Log.d(TAG, "onDestroy: " + "停止服务");
+        myThread.interrupt();
     }
 
     //监听mqtt
@@ -127,7 +99,7 @@ public class MqttService extends Service {
                 String content = jsonObject.getString("content");
                 Log.d(TAG, "startMQTT: "+title+content);
                 EventBus.getDefault().post(new EventBusMsg("获取到消息..."));
-                EventBus.getDefault().post(new EventBusMsg("title:" + title + "content:" + content));
+                EventBus.getDefault().post(new EventBusMsg("title:" + title + "  content:" + content));
                 sendNotification(title, content);
             }
 
@@ -171,4 +143,36 @@ public class MqttService extends Service {
         imei = telephonyManager.getDeviceId();
         Log.d(TAG, "initData: " + imei);
     }
-}
+    public class MyThread extends Thread{
+        @Override
+        public void run() {
+            super.run();
+            try {
+                URL url = new URL("http://120.78.209.207:8888/api/getTopics" + "?uid=" + imei + "&applicationId=" + applicationId);
+                HttpURLConnection coon = (HttpURLConnection) url.openConnection();
+                coon.setRequestMethod("GET");
+                coon.setReadTimeout(6000);
+                InputStream in = coon.getInputStream();
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                byte[] b = new byte[1024];
+                int length = 0;
+                while ((length = in.read(b)) > -1) {
+                    baos.write(b, 0, length);
+                }
+                String msg = baos.toString();
+                String str = new JSONObject(msg).getJSONObject("data").getJSONArray("topics").toString();
+                topics = str.substring(1, str.length() - 1);
+                Log.d(TAG, "run: " + topics);
+
+                startMQTT();
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+        }
+    }
+
